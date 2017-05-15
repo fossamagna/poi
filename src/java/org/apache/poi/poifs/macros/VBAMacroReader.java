@@ -17,8 +17,8 @@
 
 package org.apache.poi.poifs.macros;
 
-import static org.apache.poi.util.StringUtil.startsWithIgnoreCase;
 import static org.apache.poi.util.StringUtil.endsWithIgnoreCase;
+import static org.apache.poi.util.StringUtil.startsWithIgnoreCase;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PushbackInputStream;
 import java.nio.charset.Charset;
 import java.util.HashMap;
@@ -40,6 +41,7 @@ import org.apache.poi.poifs.filesystem.DocumentNode;
 import org.apache.poi.poifs.filesystem.Entry;
 import org.apache.poi.poifs.filesystem.NPOIFSFileSystem;
 import org.apache.poi.poifs.filesystem.OfficeXmlFileException;
+import org.apache.poi.poifs.macros.Module.ModuleType;
 import org.apache.poi.util.CodePageUtil;
 import org.apache.poi.util.HexDump;
 import org.apache.poi.util.IOUtils;
@@ -114,6 +116,20 @@ public class VBAMacroReader implements Closeable {
         fs.close();
         fs = null;
     }
+    
+    public Map<String, Module> readMacroModules() throws IOException {
+        final ModuleMap modules = new ModuleMap();
+        findMacros(fs.getRoot(), modules);
+        findProjectProperties(fs.getRoot(), modules);
+
+        Map<String, Module> moduleSources = new HashMap<String, Module>();
+        for (Map.Entry<String, ModuleImpl> entry : modules.entrySet()) {
+            ModuleImpl module = entry.getValue();
+            module.charset = modules.charset;
+            moduleSources.put(entry.getKey(), module);
+        }
+        return moduleSources;
+    }
 
     /**
      * Reads all macros from all modules of the opened office file. 
@@ -122,30 +138,33 @@ public class VBAMacroReader implements Closeable {
      * @since 3.15-beta2
      */
     public Map<String, String> readMacros() throws IOException {
-        final ModuleMap modules = new ModuleMap();
-        findMacros(fs.getRoot(), modules);
-        
+        Map<String, Module> modules = readMacroModules();
         Map<String, String> moduleSources = new HashMap<String, String>();
         for (Map.Entry<String, Module> entry : modules.entrySet()) {
-            Module module = entry.getValue();
-            if (module.buf != null && module.buf.length > 0) { // Skip empty modules
-                moduleSources.put(entry.getKey(), new String(module.buf, modules.charset));
-            }
+            moduleSources.put(entry.getKey(), entry.getValue().getContent());
         }
         return moduleSources;
     }
     
-    protected static class Module {
+    protected static class ModuleImpl implements Module {
         Integer offset;
         byte[] buf;
+        ModuleType moduleType;
+        Charset charset;
         void read(InputStream in) throws IOException {
             final ByteArrayOutputStream out = new ByteArrayOutputStream();
             IOUtils.copy(in, out);
             out.close();
             buf = out.toByteArray();
         }
+        public String getContent() {
+            return new String(buf, charset);
+        }
+        public ModuleType geModuleType() {
+            return moduleType;
+        }
     }
-    protected static class ModuleMap extends HashMap<String, Module> {
+    protected static class ModuleMap extends HashMap<String, ModuleImpl> {
         Charset charset = Charset.forName("Cp1252"); // default charset
     }
     
@@ -202,10 +221,10 @@ public class VBAMacroReader implements Closeable {
      */
     private static void readModule(RLEDecompressingInputStream in, String streamName, ModuleMap modules) throws IOException {
         int moduleOffset = in.readInt();
-        Module module = modules.get(streamName);
+        ModuleImpl module = modules.get(streamName);
         if (module == null) {
             // First time we've seen the module. Add it to the ModuleMap and decompress it later
-            module = new Module();
+            module = new ModuleImpl();
             module.offset = moduleOffset;
             modules.put(streamName, module);
             // Would adding module.read(in) here be correct?
@@ -220,11 +239,11 @@ public class VBAMacroReader implements Closeable {
     }
     
     private static void readModule(DocumentInputStream dis, String name, ModuleMap modules) throws IOException {
-        Module module = modules.get(name);
+        ModuleImpl module = modules.get(name);
         // TODO Refactor this to fetch dir then do the rest
         if (module == null) {
             // no DIR stream with offsets yet, so store the compressed bytes for later
-            module = new Module();
+            module = new ModuleImpl();
             modules.put(name, module);
             module.read(dis);
         } else if (module.buf == null) { //if we haven't already read the bytes for the module keyed off this name...
@@ -357,6 +376,54 @@ public class VBAMacroReader implements Closeable {
             }
             finally {
                 dis.close();
+            }
+        }
+    }
+    
+    protected void findProjectProperties(DirectoryNode node, ModuleMap modules) throws IOException {
+        for (Entry entry : node) {
+            if ("project".equalsIgnoreCase(entry.getName())) {
+                DocumentNode document = (DocumentNode)entry;
+                DocumentInputStream dis = new DocumentInputStream(document);
+                readProjectProperties(dis, modules);
+            } else {
+                for (Entry child : node) {
+                    if (child instanceof DirectoryNode) {
+                        findProjectProperties((DirectoryNode)child, modules);
+                    }
+                }
+                
+            }
+        }
+    }
+
+    protected void readProjectProperties(DocumentInputStream dis, ModuleMap modules) throws IOException {
+        InputStreamReader reader = new InputStreamReader(dis, modules.charset);
+        StringBuilder builder = new StringBuilder();
+        char[] buffer = new char[512];
+        int read;
+        while ((read = reader.read(buffer)) >= 0) {
+            builder.append(buffer, 0, read);
+        }
+        String properties = builder.toString();
+        for (String line : properties.split("\r\n|\n\r")) {
+            if (!line.startsWith("[")) {
+                String[] tokens = line.split("=");
+                if (tokens.length > 1 && tokens[1].length() > 1 && tokens[1].startsWith("\"")) {
+                    // Remove any double qouates
+                    tokens[1] = tokens[1].substring(1, tokens[1].length() - 2);
+                }
+                if ("Document".equals(tokens[0])) {
+                    String mn = tokens[1].substring(0, tokens[1].indexOf("/&H"));
+                    ModuleImpl module = modules.get(mn);
+                    module.moduleType = ModuleType.Document;
+                } else if ("Module".equals(tokens[0])) {
+                    ModuleImpl module = modules.get(tokens[1]);
+                    module.moduleType = ModuleType.Module;
+                } else if ("Class".equals(tokens[0])) {
+                    ModuleImpl module = modules.get(tokens[1]);
+                    module.moduleType = ModuleType.Class;
+                }
             }
         }
     }

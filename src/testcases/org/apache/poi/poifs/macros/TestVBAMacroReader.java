@@ -17,12 +17,10 @@
 
 package org.apache.poi.poifs.macros;
 
-import org.apache.poi.POIDataSamples;
-import org.apache.poi.poifs.filesystem.NPOIFSFileSystem;
-import org.apache.poi.util.IOUtils;
-import org.apache.poi.util.StringUtil;
-import org.junit.Ignore;
-import org.junit.Test;
+import static org.apache.poi.POITestCase.assertContains;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -31,10 +29,15 @@ import java.io.InputStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
-import static org.apache.poi.POITestCase.assertContains;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import org.apache.poi.POIDataSamples;
+import org.apache.poi.poifs.filesystem.NPOIFSFileSystem;
+import org.apache.poi.poifs.macros.Module.ModuleType;
+import org.apache.poi.util.IOUtils;
+import org.apache.poi.util.StringUtil;
+import org.junit.Ignore;
+import org.junit.Test;
 
 public class TestVBAMacroReader {
     private static final Map<POIDataSamples, String> expectedMacroContents;
@@ -211,7 +214,7 @@ public class TestVBAMacroReader {
     
     protected void assertMacroContents(POIDataSamples samples, VBAMacroReader r) throws IOException {
         assertNotNull(r);
-        Map<String,String> contents = r.readMacros();
+        Map<String,Module> contents = r.readMacroModules();
         assertNotNull(contents);
         assertFalse("Found 0 macros", contents.isEmpty());
         /*
@@ -234,16 +237,17 @@ public class TestVBAMacroReader {
         
         // Check the script one
         assertContains(contents, "Module1");
-        String content = contents.get("Module1");
-        assertNotNull(content);
+        Module module = contents.get("Module1");
+        assertNotNull(module);
+        String content = module.getContent();
         assertContains(content, "Attribute VB_Name = \"Module1\"");
         //assertContains(content, "Attribute TestMacro.VB_Description = \"This is a test macro\"");
 
+        assertEquals(ModuleType.Module, module.geModuleType());
         // And the macro itself
         String testMacroNoSub = expectedMacroContents.get(samples);
         assertContains(content, testMacroNoSub);
     }
-    
 
     @Test
     public void bug59830() throws IOException {
