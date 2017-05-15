@@ -1,0 +1,4 @@
+jdk:
+  - oraclejdk8
+install:
+  - ./gradlew clean -Pgroup=com.github.fossamagna -Pversion=$VERSION -xtest :main:build publishToMavenLocal
