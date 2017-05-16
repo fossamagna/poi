@@ -2115,8 +2115,8 @@ under the License.
         <element name="then" type="sequential" />
         <element name="else" type="sequential" />
         <![CDATA[
-            var value = project.getProperty(attributes.get('test'));
-            var elems = elements.get(value ? 'then' : 'else');
+            var value = attributes.get('test');
+            var elems = elements.get(value == 'true' ? 'then' : 'else');
             if (elems) for (var i = 0; i < elems.size(); i++) elems.get(i).execute();
         ]]>
     </scriptdef>
