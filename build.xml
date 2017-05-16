@@ -2126,7 +2126,7 @@ under the License.
       <attribute name="sourceJar" default="true"/>
 
       <sequential>
-        <if test="${sourceJar}">
+        <if test="@{sourceJar}">
           <then>
             <mvn:install file="${dist.dir}/maven/@{artifactId}/@{artifactId}-${version.id}.jar">
               <pom file="${dist.dir}/maven/@{artifactId}/@{artifactId}-${version.id}.pom"/>
