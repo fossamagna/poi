@@ -3,4 +3,4 @@ jdk:
 install:
   - echo "install $VERSION"
   - ant init
-  - ant -lib ./lib -Dgroup.id=com.github.fossamagna -Dversion.id=$VERSION  mvn-install
+  - ant -lib ./lib -Dgroup.id=com.github.fossamagna -Dversion.id=$VERSION jar-src mvn-install

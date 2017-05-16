@@ -2110,13 +2110,35 @@ under the License.
       </fail>
     </target>
 
+    <scriptdef name="if" language="javascript">
+        <attribute name="test" />
+        <element name="then" type="sequential" />
+        <element name="else" type="sequential" />
+        <![CDATA[
+            var value = project.getProperty(attributes.get('test'));
+            var elems = elements.get(value ? 'then' : 'else');
+            if (elems) for (var i = 0; i < elems.size(); i++) elems.get(i).execute();
+        ]]>
+    </scriptdef>
+
     <macrodef name="m2-install">
       <attribute name="artifactId"/>
+      <attribute name="sourceJar" default="true"/>
 
       <sequential>
-        <mvn:install file="${dist.dir}/maven/@{artifactId}/@{artifactId}-${version.id}.jar">
-          <pom file="${dist.dir}/maven/@{artifactId}/@{artifactId}-${version.id}.pom"/>
-        </mvn:install>
+        <if test="${sourceJar}">
+          <then>
+            <mvn:install file="${dist.dir}/maven/@{artifactId}/@{artifactId}-${version.id}.jar">
+              <pom file="${dist.dir}/maven/@{artifactId}/@{artifactId}-${version.id}.pom"/>
+              <attach file="${dist.dir}/maven/@{artifactId}/@{artifactId}-${version.id}-sources.jar" type="jar" classifier="sources"/>
+            </mvn:install>
+          </then>
+          <else>
+            <mvn:install file="${dist.dir}/maven/@{artifactId}/@{artifactId}-${version.id}.jar">
+              <pom file="${dist.dir}/maven/@{artifactId}/@{artifactId}-${version.id}.pom"/>
+            </mvn:install>
+          </else>
+        </if>
       </sequential>
     </macrodef>
 
@@ -2125,7 +2147,7 @@ under the License.
       <m2-install artifactId="poi-scratchpad"/>
       <m2-install artifactId="poi-ooxml"/>
       <m2-install artifactId="poi-examples"/>
-      <m2-install artifactId="poi-ooxml-schemas"/>
+      <m2-install artifactId="poi-ooxml-schemas" sourceJar="false"/>
       <m2-install artifactId="poi-excelant"/>
     </target>
 
