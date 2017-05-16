@@ -60,12 +60,12 @@
 
   <dependencies>
     <dependency>
-       <groupId>org.apache.poi</groupId>
+       <groupId>@GROUPID@</groupId>
        <artifactId>poi</artifactId>
        <version>@VERSION@</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.poi</groupId>
+      <groupId>@GROUPID@</groupId>
       <artifactId>poi-ooxml-schemas</artifactId>
       <version>@VERSION@</version>
     </dependency>

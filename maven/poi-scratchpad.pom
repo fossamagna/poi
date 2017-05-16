@@ -60,7 +60,7 @@
 
   <dependencies>
     <dependency>
-       <groupId>org.apache.poi</groupId>
+       <groupId>@GROUPID@</groupId>
        <artifactId>poi</artifactId>
        <version>@VERSION@</version>
     </dependency>
