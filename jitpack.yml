@@ -1,4 +1,6 @@
 jdk:
   - oraclejdk8
 install:
-  - ./gradlew clean -Pgroup=com.github.fossamagna -Pversion=$VERSION -xtest :main:build publishToMavenLocal
+  - echo "install $VERSION"
+  - ant init
+  - ant -lib ./lib -Dgroup.id=com.github.fossamagna -Dversion.id=$VERSION  mvn-install

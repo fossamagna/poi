@@ -40,6 +40,7 @@ under the License.
 
     <description>The Apache POI project Ant build.</description>
 
+    <property name="group.id" value="org.apache.poi"/>
     <property name="version.id" value="3.17-beta1"/>
     <property name="release.rc" value="RC1"/>
 
@@ -620,6 +621,7 @@ under the License.
     <target name="fetch-jars" depends="check-jars" unless="jars.present"
             description="Fetches needed JAR files from the Internet">
         <mkdir dir="${main.lib}"/>
+    	<downloadfile src="http://central.maven.org/maven2/org/apache/maven/maven-ant-tasks/2.1.3/maven-ant-tasks-2.1.3.jar" dest="${main.lib}/maven-ant-tasks-2.1.3.jar"/>
         <downloadfile src="${main.commons-logging.url}" dest="${main.commons-logging.jar}"/>
         <downloadfile src="${main.commons-codec.url}" dest="${main.commons-codec.jar}"/>
         <downloadfile src="${main.log4j.url}" dest="${main.log4j.jar}"/>
@@ -1860,6 +1862,7 @@ under the License.
             <filterchain>
                 <replacetokens>
                     <token key="VERSION" value="${version.id}"/>
+                    <token key="GROUPID" value="com.github.fossamagna"/>
                 </replacetokens>
             </filterchain>
         </copy>
