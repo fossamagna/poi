@@ -423,6 +423,9 @@ public class VBAMacroReader implements Closeable {
                 } else if ("Class".equals(tokens[0])) {
                     ModuleImpl module = modules.get(tokens[1]);
                     module.moduleType = ModuleType.Class;
+                } else if ("BaseClass".equals(tokens[0])) {
+                    ModuleImpl module = modules.get(tokens[1]);
+                    module.moduleType = ModuleType.BaseClass;
                 }
             }
         }
