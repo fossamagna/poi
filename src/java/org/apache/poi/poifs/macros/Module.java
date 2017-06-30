@@ -27,7 +27,8 @@ public interface Module {
     public enum ModuleType {
         Document,
         Module,
-        Class
+        Class,
+        BaseClass
     }
 
     /**
